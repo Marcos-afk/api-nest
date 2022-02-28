@@ -11,7 +11,8 @@ import {
 } from '@nestjs/common';
 import { Response } from 'express';
 import { CoursesService } from './courses.service';
-import { Course } from './entities/course.entity';
+import { CreateCourseDto } from './dto/createCourseDto';
+import { UpdateCourseDto } from './dto/updateCourseDto';
 
 @Controller('courses')
 export class CoursesController {
@@ -29,30 +30,32 @@ export class CoursesController {
   }
 
   @Post()
-  create(@Body() createCourse: Course, @Res() res: Response) {
-    this.coursesService.create(createCourse);
+  create(@Body() createCourseDto: CreateCourseDto, @Res() res: Response) {
+    const course = this.coursesService.create(createCourseDto);
     return res
       .status(HttpStatus.CREATED)
-      .json({ message: 'Curso criado com sucesso!' });
+      .json({ message: 'Curso criado com sucesso!', createCourse: course });
   }
 
   @Put(':id')
   update(
     @Param('id') id: string,
-    @Body() updateCourse: Course,
+    @Body() updateCourseDto: UpdateCourseDto,
     @Res() res: Response,
   ) {
-    this.coursesService.update(id, updateCourse);
-    return res
-      .status(HttpStatus.OK)
-      .json({ message: 'Curso atualizado com sucesso!' });
+    this.coursesService.update(id, updateCourseDto);
+    return res.status(HttpStatus.OK).json({
+      message: 'Curso atualizado com sucesso!',
+      updateCourse: updateCourseDto,
+    });
   }
 
   @Delete(':id')
   remove(@Param('id') id: string, @Res() res: Response) {
-    this.coursesService.remove(id);
-    return res
-      .status(HttpStatus.OK)
-      .json({ message: `Curso com o id ${id}, apagado com sucesso!` });
+    const course = this.coursesService.remove(id);
+    return res.status(HttpStatus.OK).json({
+      message: `Curso com o id ${id}, apagado com sucesso!`,
+      UpdateCourse: course,
+    });
   }
 }

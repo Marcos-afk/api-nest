@@ -55,6 +55,7 @@ export class CoursesService {
       );
     }
     this.courses.push(createCourseDto);
+    return createCourseDto;
   }
 
   update(id: string, updateCourseDto: any) {
@@ -92,6 +93,7 @@ export class CoursesService {
     }
 
     this.courses[indexCourse] = updateCourseDto;
+    return updateCourseDto;
   }
 
   remove(id: string) {
