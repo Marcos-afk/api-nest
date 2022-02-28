@@ -43,10 +43,10 @@ export class CoursesController {
     @Body() updateCourseDto: UpdateCourseDto,
     @Res() res: Response,
   ) {
-    this.coursesService.update(id, updateCourseDto);
+    const course = this.coursesService.update(id, updateCourseDto);
     return res.status(HttpStatus.OK).json({
       message: 'Curso atualizado com sucesso!',
-      updateCourse: updateCourseDto,
+      updateCourse: course,
     });
   }
 
