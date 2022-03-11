@@ -1,27 +1,27 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { CreateCourseDto } from './dto/createCourseDto';
+import { UpdateCourseDto } from './dto/updateCourseDto';
 import { Course } from './entities/course.entity';
 
 @Injectable()
 export class CoursesService {
-  private courses: Course[] = [
-    {
-      id: 1,
-      name: 'Redes de computadores',
-      duration: 50,
-      description: 'Curso básico de redes',
-      tags: ['redes de computadores', 'iniciante'],
-    },
-  ];
+  constructor(
+    @InjectRepository(Course)
+    private readonly coursesRepository: Repository<Course>,
+  ) {}
 
-  findAll() {
-    if (this.courses.length < 1) {
+  async findAll() {
+    const courses = await this.coursesRepository.find();
+    if (courses.length < 1) {
       throw new HttpException('Lista vazia.', HttpStatus.NOT_FOUND);
     }
-    return this.courses;
+    return courses;
   }
 
-  findById(id: string) {
-    const course = this.courses.find((course) => course.id === Number(id));
+  async findById(id: string) {
+    const course = await this.coursesRepository.findOne(id);
     if (!course) {
       throw new HttpException(
         `Curso com o id ${id}, não foi encontrado.`,
@@ -32,10 +32,10 @@ export class CoursesService {
     return course;
   }
 
-  create(createCourseDto: any) {
-    const isExistName = this.courses.find(
-      (course) => course.name === createCourseDto.name,
-    );
+  async create(createCourseDto: CreateCourseDto) {
+    const isExistName = await this.coursesRepository.findOne({
+      name: createCourseDto.name,
+    });
 
     if (isExistName) {
       throw new HttpException(
@@ -44,70 +44,53 @@ export class CoursesService {
       );
     }
 
-    const isExistId = this.courses.find(
-      (course) => course.id === Number(createCourseDto.id),
-    );
-
-    if (isExistId) {
-      throw new HttpException(
-        `Curso com o id ${isExistId.id} já foi cadastrado.`,
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-    this.courses.push(createCourseDto);
-    return createCourseDto;
+    const course = this.coursesRepository.create(createCourseDto);
+    return this.coursesRepository.save(course);
   }
 
-  update(id: string, updateCourseDto: any) {
-    const indexCourse = this.courses.findIndex(
-      (course: Course) => course.id === Number(id),
-    );
+  async update(id: string, updateCourseDto: UpdateCourseDto) {
+    const course = await this.coursesRepository.preload({
+      id: +id,
+      ...updateCourseDto,
+    });
 
-    if (indexCourse < 0) {
+    if (!course) {
       throw new HttpException(
         `Curso com o id ${id} não foi encontrado.`,
-        HttpStatus.BAD_REQUEST,
+        HttpStatus.NOT_FOUND,
       );
     }
 
-    const isExistName = this.courses.find(
-      (course) => course.name === updateCourseDto.name,
-    );
+    const isExistName = await this.coursesRepository.findOne({
+      name: updateCourseDto.name,
+    });
 
-    if (isExistName && this.courses[indexCourse].id !== isExistName.id) {
+    if (isExistName && course.id !== isExistName.id) {
       throw new HttpException(
         `Curso com o nome ${isExistName.name} já foi cadastrado.`,
         HttpStatus.BAD_REQUEST,
       );
     }
 
-    const isExistId = this.courses.find(
-      (course) => course.id === Number(updateCourseDto.id),
-    );
-
-    if (isExistId && this.courses[indexCourse].id !== isExistId.id) {
-      throw new HttpException(
-        `Curso com o id ${isExistId.id} já foi cadastrado.`,
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    this.courses[indexCourse] = updateCourseDto;
-    return updateCourseDto;
+    return this.coursesRepository.save(course);
   }
 
-  remove(id: string) {
-    const indexCourse = this.courses.findIndex(
-      (course: Course) => course.id === Number(id),
-    );
-
-    if (indexCourse < 0) {
+  async remove(id: string) {
+    const course = await this.coursesRepository.findOne(id);
+    if (!course) {
       throw new HttpException(
         `Curso com o id ${id} não foi encontrado.`,
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    if (course.isActive) {
+      throw new HttpException(
+        `Curso ativo não pode ser excluído.`,
         HttpStatus.BAD_REQUEST,
       );
     }
 
-    this.courses.splice(indexCourse, 1);
+    return this.coursesRepository.remove(course);
   }
 }
