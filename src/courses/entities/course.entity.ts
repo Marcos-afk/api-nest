@@ -2,9 +2,12 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  JoinTable,
+  ManyToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { Tag } from './Tag.entity';
 
 @Entity('courses')
 export class Course {
@@ -20,8 +23,17 @@ export class Course {
   @Column()
   description: string;
 
-  @Column('json', { nullable: true })
-  tags: string[];
+  @JoinTable()
+  @ManyToMany(
+    () => Tag,
+    (tag: Tag) => {
+      tag.courses;
+    },
+    {
+      cascade: true,
+    },
+  )
+  tags: Tag[];
 
   @Column('boolean', { default: true })
   isActive: boolean;

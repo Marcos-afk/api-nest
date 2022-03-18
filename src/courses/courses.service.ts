@@ -4,24 +4,37 @@ import { Repository } from 'typeorm';
 import { CreateCourseDto } from './dto/createCourseDto';
 import { UpdateCourseDto } from './dto/updateCourseDto';
 import { Course } from './entities/course.entity';
+import { Tag } from './entities/Tag.entity';
 
 @Injectable()
 export class CoursesService {
   constructor(
     @InjectRepository(Course)
     private readonly coursesRepository: Repository<Course>,
+
+    @InjectRepository(Tag)
+    private readonly tagsRepository: Repository<Tag>,
   ) {}
 
-  async findAll() {
-    const courses = await this.coursesRepository.find();
+  public async findAll() {
+    const courses = await this.coursesRepository
+      .createQueryBuilder('courses')
+      .leftJoin('courses.tags', 'tags')
+      .addSelect(['tags.name'])
+      .getMany();
     if (courses.length < 1) {
       throw new HttpException('Lista vazia.', HttpStatus.NOT_FOUND);
     }
     return courses;
   }
 
-  async findById(id: string) {
-    const course = await this.coursesRepository.findOne(id);
+  public async findById(id: string) {
+    const course = await this.coursesRepository
+      .createQueryBuilder('courses')
+      .leftJoin('courses.tags', 'tags')
+      .addSelect(['tags.name'])
+      .where('courses.id = :id', { id })
+      .getOne();
     if (!course) {
       throw new HttpException(
         `Curso com o id ${id}, não foi encontrado.`,
@@ -32,7 +45,11 @@ export class CoursesService {
     return course;
   }
 
-  async create(createCourseDto: CreateCourseDto) {
+  public async create(createCourseDto: CreateCourseDto) {
+    const tags = await Promise.all(
+      createCourseDto.tags.map((name) => this.preloadTagByName(name)),
+    );
+
     const isExistName = await this.coursesRepository.findOne({
       name: createCourseDto.name,
     });
@@ -44,14 +61,22 @@ export class CoursesService {
       );
     }
 
-    const course = this.coursesRepository.create(createCourseDto);
+    const course = this.coursesRepository.create({
+      ...createCourseDto,
+      tags,
+    });
     return this.coursesRepository.save(course);
   }
 
-  async update(id: string, updateCourseDto: UpdateCourseDto) {
+  public async update(id: string, updateCourseDto: UpdateCourseDto) {
+    const tags = await Promise.all(
+      updateCourseDto.tags.map((name) => this.preloadTagByName(name)),
+    );
+
     const course = await this.coursesRepository.preload({
       id: +id,
       ...updateCourseDto,
+      tags,
     });
 
     if (!course) {
@@ -75,7 +100,7 @@ export class CoursesService {
     return this.coursesRepository.save(course);
   }
 
-  async remove(id: string) {
+  public async remove(id: string) {
     const course = await this.coursesRepository.findOne(id);
     if (!course) {
       throw new HttpException(
@@ -92,5 +117,14 @@ export class CoursesService {
     }
 
     return this.coursesRepository.remove(course);
+  }
+
+  private async preloadTagByName(name: string) {
+    const tag = await this.tagsRepository.findOne({ name });
+    if (!tag) {
+      return this.tagsRepository.create({ name });
+    }
+
+    return tag;
   }
 }

@@ -19,7 +19,6 @@ export class UpdateCourseDto {
   @IsString({ each: true })
   @ArrayNotEmpty()
   readonly tags: string[];
-
   @IsBoolean()
   @IsNotEmpty()
   readonly isActive: boolean;
