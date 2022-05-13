@@ -17,11 +17,8 @@ export class CoursesService {
   ) {}
 
   public async findAll() {
-    const courses = await this.coursesRepository
-      .createQueryBuilder('courses')
-      .leftJoin('courses.tags', 'tags')
-      .addSelect(['tags.name'])
-      .getMany();
+    const courses = await this.coursesRepository.find({ relations: ['tags'] });
+
     if (courses.length < 1) {
       throw new HttpException('Lista vazia.', HttpStatus.NOT_FOUND);
     }
@@ -29,12 +26,10 @@ export class CoursesService {
   }
 
   public async findById(id: string) {
-    const course = await this.coursesRepository
-      .createQueryBuilder('courses')
-      .leftJoin('courses.tags', 'tags')
-      .addSelect(['tags.name'])
-      .where('courses.id = :id', { id })
-      .getOne();
+    const course = await this.coursesRepository.findOne(id, {
+      relations: ['tags'],
+    });
+
     if (!course) {
       throw new HttpException(
         `Curso com o id ${id}, não foi encontrado.`,
